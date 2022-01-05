@@ -163,10 +163,11 @@ def list_room(live_id: int) -> list[RoomInfo]:
                     SELECT r.`id`, r.`live_id`, COUNT(*)
                     FROM `room` r JOIN `room_user` ru
                     ON r.`id` = ru.`room_id`
+                    WHERE r.`status` = :status
                     GROUP BY r.`id`
                 """
                 ),
-                {"live_id": live_id},
+                {"status": int(WaitRoomStatus.Waiting), "live_id": live_id},
             )
         else:
             result = conn.execute(
@@ -175,11 +176,11 @@ def list_room(live_id: int) -> list[RoomInfo]:
                     SELECT r.`id`, r.`live_id`, COUNT(*)
                     FROM `room` r JOIN `room_user` ru
                     ON r.`id` = ru.`room_id`
-                    WHERE r.`live_id` = :live_id
+                    WHERE r.`status` = :status AND r.`live_id` = :live_id
                     GROUP BY r.`id`
                 """
                 ),
-                {"live_id": live_id},
+                {"status": int(WaitRoomStatus.Waiting), "live_id": live_id},
             )
 
     ret = []
