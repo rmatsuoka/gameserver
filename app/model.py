@@ -257,3 +257,32 @@ def wait_room(room_id: int, token: str) -> tuple[WaitRoomStatus, list[RoomUser]]
             )
         )
     return room.status, ret
+
+def start_room(token: str, room_id: int):
+    with engine.begin() as conn:
+        # user = _get_user_by_token(conn, token)
+        # if user is None:
+        #     raise InvalidToken
+        # result = conn.execute(
+        #     text(
+        #         """
+        #         SELECT `owner`
+        #         FROM `room`
+        #         WHERE `id` = :room_id
+        #         """
+        #     ),
+        #     {"room_id": room_id},
+        # )
+        # if result.one().owner != user.id:
+        #     raise InvalidToken
+        result = conn.execute(
+            text(
+                """UPDATE `room`
+                SET `status` = :status
+                WHERE `id` = :room_id"""
+            ),
+            {
+                "status": int(WaitRoomStatus.LiveStart),
+                "room_id": room_id,
+            },
+        )
