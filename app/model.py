@@ -307,3 +307,31 @@ def end_room(token: str, room_id: int, judge: list[int], score: int):
                 # decoding judge: list(map(int, judge.split(",")))
             },
         )
+
+def result_room(room_id: int) -> list[ResultUser]:
+    with engine.begin() as conn:
+        result = conn.execute(
+            text(
+                """SELECT `user_id`, `judge_count_list`, `score`
+                FROM `room_user`
+                WHERE `room_id` = :room_id"""
+            ),
+            {"room_id": room_id},
+        )
+        try:
+            rows = result.all()
+        except NoResultFound:
+            return []
+
+        ret = []
+        for row in rows:
+            if row.score is None:
+                return []
+            ret.append(
+                ResultUser(
+                    user_id=row.user_id,
+                    judge_count_list=list(map(int, row.judge_count_list.split(","))),
+                    score=row.score,
+                )
+            )
+        return ret

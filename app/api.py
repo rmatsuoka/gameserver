@@ -13,6 +13,7 @@ from .model import (
     RoomUser,
     SafeUser,
     WaitRoomStatus,
+    result_room,
 )
 
 app = FastAPI()
@@ -162,4 +163,5 @@ class RoomResultResponse(BaseModel):
 
 @app.post("/room/result", response_model=RoomResultResponse)
 def room_result(req: RoomID, token: str = Depends(get_auth_token)):
-    pass
+    lst = model.result_room(req.room_id)
+    return RoomResultResponse(result_user_list=lst)
