@@ -298,9 +298,10 @@ def end_room(token: str, room_id: int, judge: list[int], score: int):
             text(
                 """UPDATE `room_user`
                 SET `score` = :score, `judge_count_list` = :judge
-                WHERE `user_id` = :user_id"""
+                WHERE `room_id`=:room_id and `user_id` = :user_id"""
             ),
             {
+                "room_id": room_id,
                 "user_id": user.id,
                 "score": score,
                 "judge": ",".join(map(str, judge)),
