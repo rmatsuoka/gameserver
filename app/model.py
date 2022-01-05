@@ -335,3 +335,20 @@ def result_room(room_id: int) -> list[ResultUser]:
                 )
             )
         return ret
+
+def leave_room(token: str, room_id: int):
+    with engine.begin() as conn:
+        user = _get_user_by_token(conn, token)
+        if user is None:
+            raise InvalidToken
+
+        result = conn.execute(
+            text(
+                """DELETE FROM `room_user`
+                WHERE `room_id`=:room_id AND `user_id`=:user_id"""
+            ),
+            {
+                "room_id": room_id,
+                "user_id": user.id,
+            }
+        )
