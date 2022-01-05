@@ -258,6 +258,19 @@ def wait_room(room_id: int, token: str) -> tuple[WaitRoomStatus, list[RoomUser]]
         )
     return room.status, ret
 
+def _update_room_status(conn, room_id: int, status: WaitRoomStatus):
+    result = conn.execute(
+        text(
+            """UPDATE `room`
+            SET `status` = :status
+            WHERE `id` = :room_id"""
+        ),
+        {
+            "status": int(status),
+            "room_id": room_id,
+        },
+    )
+
 def start_room(token: str, room_id: int):
     with engine.begin() as conn:
         # user = _get_user_by_token(conn, token)
@@ -275,14 +288,22 @@ def start_room(token: str, room_id: int):
         # )
         # if result.one().owner != user.id:
         #     raise InvalidToken
+        _update_room_status(conn, room_id, WaitRoomStatus.LiveStart)
+
+def end_room(token: str, room_id: int, judge: list[int], score: int):
+    with engine.begin() as conn:
+        user = _get_user_by_token(conn, token)
+        _update_room_status(conn, room_id, WaitRoomStatus.Dissoution)
         result = conn.execute(
             text(
-                """UPDATE `room`
-                SET `status` = :status
-                WHERE `id` = :room_id"""
+                """UPDATE `room_user`
+                SET `score` = :score, `judge_count_list` = :judge
+                WHERE `user_id` = :user_id"""
             ),
             {
-                "status": int(WaitRoomStatus.LiveStart),
-                "room_id": room_id,
+                "user_id": user.id,
+                "score": score,
+                "judge": ",".join(map(str, judge)),
+                # decoding judge: list(map(int, judge.split(",")))
             },
         )

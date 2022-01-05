@@ -151,7 +151,8 @@ class RoomEndRequest(BaseModel):
 
 @app.post("/room/end", response_model=Empty)
 def room_end(req: RoomEndRequest, token: str = Depends(get_auth_token)):
-    pass
+    model.end_room(token, req.room_id, req.judge_count_list, req.score)
+    return {}
 
 
 # /room/result
