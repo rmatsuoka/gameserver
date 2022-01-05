@@ -75,6 +75,9 @@ def update_user(token: str, name: str, leader_card_id: int) -> None:
 
 
 # Room
+RoomMaxUserCount = 4
+
+
 class LiveDifficulty(IntEnum):
     normal = 1
     hard = 2
@@ -196,12 +199,31 @@ def list_room(live_id: int) -> list[RoomInfo]:
     return ret
 
 
-def join_room(room_id: int, token: str, select_difficulty: LiveDifficulty):
-    user = _get_user_by_token(token)
-    if user is None:
-        raise InvalidToken
+def join_room(
+    token: str, room_id: int, select_difficulty: LiveDifficulty
+) -> JoinRoomResult:
     with engine.begin() as conn:
+        user = _get_user_by_token(conn, token)
+        if user is None:
+            raise InvalidToken
+        room_status = conn.execute(
+            text(
+                """
+                SELECT r.`status`, COUNT(*)
+                FROM `room` r JOIN `room_user` ru
+                ON r.`id` = ru.`room_id`
+                WHERE r.`id` = :room_id
+                GROUP BY r.`id`
+                """
+            ),
+            {"room_id": room_id},
+        ).one()
+        if room_status["COUNT(*)"] >= RoomMaxUserCount:
+            return JoinRoomResult.RoomFull
+        elif room_status.status != WaitRoomStatus.Waiting:
+            return JoinRoomResult.Disbanded
         _add_user_in_room(conn, room_id, user.id, select_difficulty)
+        return JoinRoomResult.Ok
 
 
 def wait_room(room_id: int, token: str) -> tuple[WaitRoomStatus, list[RoomUser]]:
