@@ -258,6 +258,7 @@ def wait_room(room_id: int, token: str) -> tuple[WaitRoomStatus, list[RoomUser]]
         )
     return room.status, ret
 
+
 def _update_room_status(conn, room_id: int, status: WaitRoomStatus):
     result = conn.execute(
         text(
@@ -270,6 +271,7 @@ def _update_room_status(conn, room_id: int, status: WaitRoomStatus):
             "room_id": room_id,
         },
     )
+
 
 def start_room(token: str, room_id: int):
     with engine.begin() as conn:
@@ -290,6 +292,7 @@ def start_room(token: str, room_id: int):
         #     raise InvalidToken
         _update_room_status(conn, room_id, WaitRoomStatus.LiveStart)
 
+
 def end_room(token: str, room_id: int, judge: list[int], score: int):
     with engine.begin() as conn:
         user = _get_user_by_token(conn, token)
@@ -308,6 +311,7 @@ def end_room(token: str, room_id: int, judge: list[int], score: int):
                 # decoding judge: list(map(int, judge.split(",")))
             },
         )
+
 
 def result_room(room_id: int) -> list[ResultUser]:
     with engine.begin() as conn:
@@ -337,6 +341,7 @@ def result_room(room_id: int) -> list[ResultUser]:
             )
         return ret
 
+
 def leave_room(token: str, room_id: int):
     with engine.begin() as conn:
         user = _get_user_by_token(conn, token)
@@ -351,5 +356,5 @@ def leave_room(token: str, room_id: int):
             {
                 "room_id": room_id,
                 "user_id": user.id,
-            }
+            },
         )

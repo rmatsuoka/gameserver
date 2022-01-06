@@ -166,6 +166,7 @@ def room_result(req: RoomID, token: str = Depends(get_auth_token)):
     lst = model.result_room(req.room_id)
     return RoomResultResponse(result_user_list=lst)
 
+
 @app.post("/room/leave", response_model=Empty)
 def room_leave(req: RoomID, token: str = Depends(get_auth_token)):
     model.leave_room(token, req.room_id)
