@@ -206,23 +206,35 @@ def join_room(
         user = _get_user_by_token(conn, token)
         if user is None:
             raise InvalidToken
+
         room_status = conn.execute(
             text(
-                """
-                SELECT r.`status`, COUNT(*)
-                FROM `room` r JOIN `room_user` ru
-                ON r.`id` = ru.`room_id`
-                WHERE r.`id` = :room_id
-                GROUP BY r.`id`
-                """
+                """SELECT status
+                FROM `room`
+                WHERE id=:room_id
+                FOR UPDATE"""
             ),
             {"room_id": room_id},
         ).one()
-        if room_status["COUNT(*)"] >= RoomMaxUserCount:
+
+        room_user_count = conn.execute(
+            text(
+                """SELECT COUNT(*)
+                FROM `room_user`
+                WHERE `room_id` = :room_id
+                GROUP BY `room_id`
+                FOR UPDATE"""
+            ),
+            {"room_id": room_id},
+        ).one()
+
+        if room_user_count["COUNT(*)"] >= RoomMaxUserCount:
             return JoinRoomResult.RoomFull
         elif room_status.status != WaitRoomStatus.Waiting:
             return JoinRoomResult.Disbanded
+
         _add_user_in_room(conn, room_id, user.id, select_difficulty)
+        conn.execute(text("COMMIT"))
         return JoinRoomResult.Ok
 
 
@@ -290,7 +302,17 @@ def start_room(token: str, room_id: int):
         # )
         # if result.one().owner != user.id:
         #     raise InvalidToken
+        conn.execute(
+            text(
+                """SELECT `status`
+                FROM `room`
+                WHERE `id`=:room_id
+                FOR UPDATE"""
+            ),
+            {"room_id": room_id},
+        )
         _update_room_status(conn, room_id, WaitRoomStatus.LiveStart)
+        conn.execute(text("COMMIT"))
 
 
 def end_room(token: str, room_id: int, judge: list[int], score: int):
@@ -347,8 +369,28 @@ def leave_room(token: str, room_id: int):
         user = _get_user_by_token(conn, token)
         if user is None:
             raise InvalidToken
+        conn.execute(
+            text(
+                """SELECT status
+                FROM `room`
+                WHERE `id`=:room_id
+                FOR UPDATE"""
+            ),
+            {"room_id": room_id},
+        )
+        count_result = conn.execute(
+            text(
+                """SELECT COUNT(*)
+                FROM `room_user`
+                WHERE `room_id` = :room_id
+                GROUP BY `room_id`
+                FOR UPDATE"""
+            ),
+            {"room_id": room_id},
+        ).one()
+        count = count_result["COUNT(*)"]
 
-        result = conn.execute(
+        conn.execute(
             text(
                 """DELETE FROM `room_user`
                 WHERE `room_id`=:room_id AND `user_id`=:user_id"""
@@ -358,3 +400,7 @@ def leave_room(token: str, room_id: int):
                 "user_id": user.id,
             },
         )
+
+        if count == 1:
+            _update_room_status(conn, room_id, WaitRoomStatus.Dissoution)
+        conn.execute(text("COMMIT"))
